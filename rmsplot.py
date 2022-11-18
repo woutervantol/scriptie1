@@ -2,28 +2,24 @@ from hcipy import *
 import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow import keras
-import tensorflow as tf
 from constants import *
 
 image_ref = Field(np.load("./data/image_ref.npy"), pwfs_grid)
-
-# print(np.sqrt(image_ref.shape))
+deformable_mirror = DeformableMirror(influence_functions)
+# transfmatrix = deformable_mirror.transformation_matrix
 matrix = np.load("./data/reconstructionMatrix.npy")
 
 model = keras.models.load_model("./models/testmodel")
-
 model.summary()
 
-deformable_mirror = DeformableMirror(influence_functions)
 
 datamatrix = np.load("./data/random_noise/datamatrix.npy")
 labelmatrix = np.load("./data/random_noise/labelmatrix.npy")
 
-variances = np.sqrt(np.var(datamatrix, axis=1))
-# print((datamatrix.transpose() / variances).transpose())
-cnnpredictions = model.predict((datamatrix.transpose() / variances).transpose().reshape(1100, 128, 128, 1))
 
-# fig, ax = plt.subplots()
+variances = np.sqrt(np.var(datamatrix, axis=1))
+cnnpredictions = model.predict((datamatrix / variances[:,None]).reshape(len(datamatrix), int(num_pwfs_pixels/2), int(num_pwfs_pixels/2), 4))
+
 
 y1 = np.zeros(len(rmslist))
 y2 = np.zeros(len(rmslist))
@@ -32,8 +28,24 @@ x = rmslist.copy()
 xcounts = np.zeros(len(rmslist))
 
 for i in range(len(datamatrix)):
-    # for j in range(100):
-    measurement = datamatrix[i]
+    measurement = np.zeros((num_pwfs_pixels, num_pwfs_pixels))
+    h = int(num_pwfs_pixels/2)
+    measurement[:h, :h] = datamatrix[i, :, 0].reshape(h, h)
+    measurement[h:, :h] = datamatrix[i, :, 1].reshape(h, h)
+    measurement[:h, h:] = datamatrix[i, :, 2].reshape(h, h)
+    measurement[h:, h:] = datamatrix[i, :, 3].reshape(h, h)
+    measurement = measurement.flatten()
+
+    # plt.imshow((measurement - image_ref).reshape(128, 128))
+    # plt.colorbar()
+    # plt.show()
+    # plt.imshow(measurement.reshape(128, 128))
+    # plt.colorbar()
+    # plt.show()
+    # plt.imshow(image_ref.reshape(128, 128))
+    # plt.colorbar()
+    # plt.show()
+
     matrixprediction = np.matmul(matrix, measurement - image_ref)
     # print(matrixprediction)
     # plt.imshow(matrixprediction.reshape(20, 20))
@@ -71,6 +83,10 @@ for i in range(len(datamatrix)):
     # plt.colorbar()
     # plt.show()
 
+    # plt.imshow(dm_state.reshape(256, 256))
+    # plt.colorbar()
+    # plt.show()
+
     # plt.imshow(cnnprediction.reshape(256, 256))
     # plt.colorbar()
     # plt.show()
@@ -95,12 +111,12 @@ rmss /= xcounts
 y1 /= rmss
 y2 /= rmss
 
-plt.semilogx(x, y1, marker="o", color="green", label="cnn")
+plt.semilogx(rmss, y1, marker="o", color="green", label="cnn")
 # plt.ylim(0, 1.2)
 plt.xlabel("input RMS(rad)")
 plt.ylabel("residual RMS / input RMS")
 
-plt.semilogx(x, y2, marker="o", color="blue", label="matrix")
+plt.semilogx(rmss, y2, marker="o", color="blue", label="matrix")
 # plt.ylim(0, 1.2)
 plt.xlabel("input RMS(rad)")
 plt.ylabel("residual RMS / input RMS")

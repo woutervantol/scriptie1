@@ -15,11 +15,39 @@ pwfs = PyramidWavefrontSensorOptics(pupil_grid, pwfs_grid, separation=1.2*pupil_
 wf = Wavefront(aperture, wavelength_wfs)
 
 
-# camera = NoiselessDetector(pwfs_grid)
-# camera.integrate(pwfs.forward(wf), 1)
-# image_ref = camera.read_out()
-# image_ref /= image_ref.sum()
-# np.save("./Data/image_ref", image_ref)
+# reconstruction_matrix = np.load("./data/reconstructionMatrix001.npy")
+# image_ref = Field(np.load("./data/image_ref.npy"), pwfs_grid)
+# inputs = np.linspace(-10, 10, 50)
+# outputs = []
+# for i in inputs:
+#     amplitude = probe_amp = -i * wavelength_wfs /(2*np.pi)
+#     amps = np.zeros((num_actuators_across_pupil**2,))
+#     amps[int((num_actuators_across_pupil**2)/2) - 5] = amplitude
+#     deformable_mirror.actuators = amps
+#     dm_wf = deformable_mirror.forward(wf)
+#     wfs_wf = pwfs.forward(dm_wf)
+#     image = wfs_wf.intensity
+#     image /= np.sum(image)
+#     matrixprediction = np.matmul(reconstruction_matrix, image - image_ref)
+#     # deformable_mirror.actuators = matrixprediction
+#     # plaatje = deformable_mirror.opd
+#     # plaatje[aperture == 0] = 0
+#     # plt.imshow(plaatje.reshape(256, 256))
+#     # plt.show()
+#     output = matrixprediction[int((num_actuators_across_pupil**2)/2)-5] / wavelength_wfs *(2*np.pi)
+#     outputs.append(output)
+#     # plt.imshow(matrixprediction.reshape(20, 20))
+#     # plt.show()
+# plt.plot(inputs, outputs)
+# plt.show()
+# dadassadadssad
+
+
+camera = NoiselessDetector(pwfs_grid)
+camera.integrate(pwfs.forward(wf), 1)
+image_ref = camera.read_out()
+image_ref /= image_ref.sum()
+# np.save("./data/image_ref", image_ref)
 # imshow_field(image_ref)
 # plt.show()
 
@@ -37,12 +65,12 @@ def makeMatrix():
             amp = np.zeros((num_modes,))
             amp[ind] = s * probe_amp
             deformable_mirror.actuators = amp
-
             dm_wf = deformable_mirror.forward(wf)
             wfs_wf = pwfs.forward(dm_wf)
 
-            camera.integrate(wfs_wf, 1)
-            image = camera.read_out()
+            # camera.integrate(wfs_wf, 1)
+            # image = camera.read_out()
+            image = wfs_wf.intensity
             image /= np.sum(image)
 
             slope += s * (image-image_ref)/(2 * probe_amp)
@@ -58,7 +86,7 @@ def makeMatrix():
 
 # makeMatrix()
 
-reconstruction_matrix = np.load("./data/reconstructionMatrix.npy")
+# reconstruction_matrix = np.load("./data/reconstructionMatrix.npy")
 
 spatial_resolution = wavelength_wfs / telescope_diameter
 focal_grid = make_focal_grid(q=8, num_airy=20, spatial_resolution=spatial_resolution)
@@ -95,7 +123,7 @@ def makeData(rms):
     nr_photons = 1e6
     image = np.random.poisson(image*nr_photons)
     image_ref = image/np.sum(image)
-    return image_ref, deformable_mirror.actuators
+    return image_ref.reshape(num_pwfs_pixels, num_pwfs_pixels), deformable_mirror.actuators
 
 
     # imshow_field(image_ref)
@@ -112,7 +140,7 @@ def makeData(rms):
     # plt.show()
 
 
-datamatrix = np.ndarray((nr_runs*len(rmslist), num_pwfs_pixels**2))
+datamatrix = np.ndarray((nr_runs*len(rmslist), int(num_pwfs_pixels/2)**2, 4))
 labelmatrix = np.ndarray((nr_runs*len(rmslist), num_actuators_across_pupil**2))
 
 
@@ -122,8 +150,12 @@ for run in range(nr_runs):
     for rms_idx in range(len(rmslist)):
         measurement, dm_state = makeData(rmslist[rms_idx])
         rowposition = rms_idx * nr_runs + run
-        datamatrix[rowposition] = measurement
         labelmatrix[rowposition] = dm_state
+        h = int(num_pwfs_pixels/2)
+        datamatrix[rowposition,:,0] = measurement[:h, :h].flatten()
+        datamatrix[rowposition,:,1] = measurement[h:, :h].flatten()
+        datamatrix[rowposition,:,2] = measurement[:h, h:].flatten()
+        datamatrix[rowposition,:,3] = measurement[h:, h:].flatten()
     print(run, nr_runs)
 np.save("./data/random_noise/datamatrix", datamatrix)
 np.save("./data/random_noise/labelmatrix", labelmatrix)
