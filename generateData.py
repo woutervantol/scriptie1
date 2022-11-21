@@ -38,7 +38,9 @@ wf = Wavefront(aperture, wavelength_wfs)
 #     outputs.append(output)
 #     # plt.imshow(matrixprediction.reshape(20, 20))
 #     # plt.show()
+
 # plt.plot(inputs, outputs)
+# plt.plot(np.linspace(-2, 2, 10), -np.linspace(-2, 2, 10), ls="dashed", lw=1)
 # plt.show()
 # dadassadadssad
 
@@ -157,8 +159,8 @@ for run in range(nr_runs):
         datamatrix[rowposition,:,2] = measurement[:h, h:].flatten()
         datamatrix[rowposition,:,3] = measurement[h:, h:].flatten()
     print(run, nr_runs)
-np.save("./data/random_noise/datamatrix", datamatrix)
-np.save("./data/random_noise/labelmatrix", labelmatrix)
+np.save("./data/random_noise/valx", datamatrix)
+np.save("./data/random_noise/valy", labelmatrix)
         # np.save("./Data/random_noise/measurements/rms_{}rad/random_test{}".format(i, j), measurement)
         # np.save("./Data/random_noise/dm_states/rms_{}rad/random_test{}".format(i, j), dm_state)
 
