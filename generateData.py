@@ -11,16 +11,16 @@ deformable_mirror = DeformableMirror(influence_functions)
 num_modes = deformable_mirror.num_actuators
 
 pwfs = PyramidWavefrontSensorOptics(pupil_grid, pwfs_grid, separation=1.2*pupil_grid_diameter, pupil_diameter=telescope_diameter, wavelength_0=wavelength_wfs, q=4)
-# pwfs = ModulatedPyramidWavefrontSensorOptics()
+# pwfs = ModulatedPyramidWavefrontSensorOptics() 3lambda over d modulatie
 wf = Wavefront(aperture, wavelength_wfs)
 
 
-# reconstruction_matrix = np.load("./data/reconstructionMatrix001.npy")
+# reconstruction_matrix = np.load("./data/reconstructionMatrix.npy")
 # image_ref = Field(np.load("./data/image_ref.npy"), pwfs_grid)
 # inputs = np.linspace(-10, 10, 50)
 # outputs = []
 # for i in inputs:
-#     amplitude = probe_amp = -i * wavelength_wfs /(2*np.pi)
+#     amplitude = i * wavelength_wfs /(2*np.pi)
 #     amps = np.zeros((num_actuators_across_pupil**2,))
 #     amps[int((num_actuators_across_pupil**2)/2) - 5] = amplitude
 #     deformable_mirror.actuators = amps
@@ -45,11 +45,10 @@ wf = Wavefront(aperture, wavelength_wfs)
 # dadassadadssad
 
 
-camera = NoiselessDetector(pwfs_grid)
-camera.integrate(pwfs.forward(wf), 1)
-image_ref = camera.read_out()
+
+image_ref = pwfs.forward(wf).intensity
 image_ref /= image_ref.sum()
-# np.save("./data/image_ref", image_ref)
+np.save("./data/image_ref", image_ref)
 # imshow_field(image_ref)
 # plt.show()
 
@@ -70,8 +69,6 @@ def makeMatrix():
             dm_wf = deformable_mirror.forward(wf)
             wfs_wf = pwfs.forward(dm_wf)
 
-            # camera.integrate(wfs_wf, 1)
-            # image = camera.read_out()
             image = wfs_wf.intensity
             image /= np.sum(image)
 
@@ -86,7 +83,7 @@ def makeMatrix():
     print(matrix.shape)
     return
 
-# makeMatrix()
+makeMatrix()
 
 # reconstruction_matrix = np.load("./data/reconstructionMatrix.npy")
 
@@ -159,8 +156,8 @@ for run in range(nr_runs):
         datamatrix[rowposition,:,2] = measurement[:h, h:].flatten()
         datamatrix[rowposition,:,3] = measurement[h:, h:].flatten()
     print(run, nr_runs)
-np.save("./data/random_noise/valx", datamatrix)
-np.save("./data/random_noise/valy", labelmatrix)
+np.save("./data/random_noise/datamatrix", datamatrix)
+np.save("./data/random_noise/labelmatrix", labelmatrix)
         # np.save("./Data/random_noise/measurements/rms_{}rad/random_test{}".format(i, j), measurement)
         # np.save("./Data/random_noise/dm_states/rms_{}rad/random_test{}".format(i, j), dm_state)
 
